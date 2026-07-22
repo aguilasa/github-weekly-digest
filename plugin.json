@@ -12,7 +12,7 @@
     "github-weekly-digest"
   ],
   "connectors": [
-    "github-cli",
-    "gmail-smtp"
+    "github-mcp",
+    "gmail-mcp"
   ]
 }

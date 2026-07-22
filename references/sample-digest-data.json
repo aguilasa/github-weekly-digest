@@ -1,0 +1,38 @@
+{
+  "repo": "example-org/example-repo",
+  "days": 7,
+  "pull_requests": [
+    {
+      "number": 42,
+      "title": "Fix flaky retry logic in the upload worker",
+      "author": "octocat",
+      "state": "open",
+      "created_at": "2026-07-18T10:00:00Z",
+      "updated_at": "2026-07-21T15:30:00Z",
+      "merged_at": null,
+      "url": "https://github.com/example-org/example-repo/pull/42"
+    },
+    {
+      "number": 41,
+      "title": "Bump dependency versions",
+      "author": "dependabot",
+      "state": "closed",
+      "created_at": "2026-07-15T09:00:00Z",
+      "updated_at": "2026-07-16T12:00:00Z",
+      "merged_at": "2026-07-16T12:00:00Z",
+      "url": "https://github.com/example-org/example-repo/pull/41"
+    }
+  ],
+  "issues": [
+    {
+      "number": 100,
+      "title": "Dashboard shows stale data after refresh",
+      "author": "reporter123",
+      "state": "open",
+      "created_at": "2026-07-19T08:00:00Z",
+      "updated_at": "2026-07-20T11:00:00Z",
+      "closed_at": null,
+      "url": "https://github.com/example-org/example-repo/issues/100"
+    }
+  ]
+}

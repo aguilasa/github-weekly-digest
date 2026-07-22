@@ -6,36 +6,87 @@ Given a GitHub repository, produces a weekly activity digest: open and
 recently-updated pull requests and issues, written to an Excel workbook,
 summarized and emailed to a configured recipient.
 
-## Connections it needs
+## Connectors it uses
 
-- **GitHub**: the `gh` CLI, authenticated on the machine running the
-  script (`gh auth login`). No separate API token is managed by this
-  skill.
-- **Email**: a Gmail account with an App Password (see the project
-  README for how to generate one), used over SMTP to send the summary.
+- **GitHub MCP connector** (`mcp__github__search_pull_requests`,
+  `mcp__github__search_issues`) — fetches the data. No token or `gh`
+  CLI setup needed beyond the MCP connector already being available in
+  the Cowork / Claude Code session.
+- **Gmail MCP connector** (`mcp__gmail__send_email`) — sends the
+  summary email with the workbook attached. No SMTP credentials or App
+  Password needed; it uses the Gmail account already authorized for the
+  MCP connector.
+- **`build_workbook.py`** (local script, no network) — the one part
+  no connector can do: turning fetched data into an `.xlsx` file. Kept
+  as a small, pure, independently-testable script (see
+  `references/sample-digest-data.json` for a fixture that exercises it
+  without a live session).
 
 ## How to carry it out
 
-Run `script.py` in this folder (via `uv run`, from the project root, so
-it can find `.env` and write to `output/`):
+When this skill is invoked for a target `owner/repo` (and a look-back
+window in days, default 7):
 
-```
-uv run skills/github-weekly-digest/script.py --repo owner/name [--days 7] [--dry-run]
-```
+1. **Fetch pull requests** with the GitHub MCP connector:
+   - `mcp__github__search_pull_requests` with query
+     `repo:{owner}/{repo} is:pr is:open` (all currently open PRs).
+   - `mcp__github__search_pull_requests` with query
+     `repo:{owner}/{repo} is:pr updated:>={since_date}` (PRs merged or
+     otherwise updated in the window).
+   - Merge the two result sets, de-duplicating by PR number.
 
-- `--repo` is required unless `REPO` is set in `.env`.
-- `--days` controls the look-back window for "recently updated" items
-  (default 7).
-- `--dry-run` builds the workbook and prints the summary but does not
-  send an email — use this to verify data retrieval before wiring up
-  email credentials.
+2. **Fetch issues** the same way with
+   `mcp__github__search_issues`, using `is:issue` instead of `is:pr`.
+
+3. **Write a `digest-data.json` file** (e.g. under `output/`) shaped as:
+
+   ```json
+   {
+     "repo": "owner/repo",
+     "days": 7,
+     "pull_requests": [
+       {"number": 1, "title": "...", "author": "...", "state": "open",
+        "created_at": "...", "updated_at": "...", "merged_at": null,
+        "url": "..."}
+     ],
+     "issues": [
+       {"number": 2, "title": "...", "author": "...", "state": "closed",
+        "created_at": "...", "updated_at": "...", "closed_at": "...",
+        "url": "..."}
+     ]
+   }
+   ```
+
+   Map each GitHub MCP result's `number`, `title`, `user.login` (as
+   `author`), `state`, `created_at`, `updated_at`,
+   `merged_at`/`closed_at`, and `html_url` (as `url`) into this shape.
+
+4. **Run the local script** to build the workbook and get the email
+   text:
+
+   ```
+   uv run skills/github-weekly-digest/build_workbook.py output/digest-data.json
+   ```
+
+   It prints the email summary to stdout and a final
+   `WORKBOOK_PATH=...` line with the generated `.xlsx` path.
+
+5. **Send the email** with the Gmail MCP connector
+   (`mcp__gmail__send_email`), using the printed summary as the body,
+   `GitHub weekly digest: {owner}/{repo}` as the subject, and the
+   workbook path from step 4 in `attachments`.
 
 ## Failure handling
 
-The script distinguishes between expected, reportable failures (missing
-`gh` auth, missing email config, SMTP errors) and lets those print a
-clear one-line error instead of a raw traceback. A failure to send email
-does not delete the workbook that was already generated.
+- `build_workbook.py` reports a clear one-line error (missing/invalid
+  JSON input, missing `repo` field) instead of a raw traceback, and
+  exits non-zero.
+- If a GitHub MCP search returns zero results, still write an empty
+  `pull_requests` / `issues` list — `build_workbook.py` renders that as
+  a "No activity in this period" row rather than failing or producing a
+  blank sheet.
+- If the Gmail MCP send fails, the workbook that was already generated
+  is left in place, so the run can be retried without re-fetching data.
 
 ## Reused by
 
