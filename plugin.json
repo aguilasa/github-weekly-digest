@@ -1,0 +1,18 @@
+{
+  "name": "github-weekly-digest",
+  "version": "1.0.0",
+  "description": "Fetches a GitHub repo's weekly pull request and issue activity, builds an Excel workbook, and emails a summary with the workbook attached.",
+  "commands": [
+    {
+      "name": "digest",
+      "file": "commands/digest.md"
+    }
+  ],
+  "skills": [
+    "github-weekly-digest"
+  ],
+  "connectors": [
+    "github-cli",
+    "gmail-smtp"
+  ]
+}
